@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../notes/notes_screen.dart';
+
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -11,11 +13,30 @@ class HomeScreen extends StatelessWidget {
   static const outline = Color(0xFF2A2B3C);
 
   void _onTap(BuildContext context, String name) {
+    final opensNotes = [
+      'Notes',
+      'Past Papers',
+      'Database Management',
+      '2023 A/L ICT Paper',
+      'Computer Architecture',
+      'Data Structures',
+      'Internet & Networks',
+    ].contains(name);
+
+    if (opensNotes) {
+      final showPapers = name == 'Past Papers' || name == '2023 A/L ICT Paper';
+
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => NotesScreen(initialTab: showPapers ? 1 : 0),
+        ),
+      );
+      return;
+    }
+
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text('$name screen එක ඊළඟට connect කරමු')),
-      );
+      ..showSnackBar(SnackBar(content: Text('$name screen coming soon')));
   }
 
   @override
