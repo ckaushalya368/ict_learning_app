@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'unit_one_screen.dart';
+
 class NotesScreen extends StatefulWidget {
   const NotesScreen({super.key, this.initialTab = 0});
 
@@ -191,11 +193,18 @@ class _NotesScreenState extends State<NotesScreen> {
           color: Colors.transparent,
           child: InkWell(
             onTap: () {
-              _openDetails(
-                'Unit ${index + 1}: $title',
-                'Chapters and notes for this unit '
-                    'have not been added yet.',
-              );
+              if (index == 0) {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const UnitOneScreen(),
+                  ),
+                );
+              } else {
+                _openDetails(
+                  'Unit ${index + 1}: $title',
+                  'Chapters and notes for this unit have not been added yet.',
+                );
+              }
             },
             child: Padding(
               padding: const EdgeInsets.all(16),
