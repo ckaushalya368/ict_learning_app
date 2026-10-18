@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../notes/notes_screen.dart';
+import '../quiz/quiz_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -13,6 +14,12 @@ class HomeScreen extends StatelessWidget {
   static const outline = Color(0xFF2A2B3C);
 
   void _onTap(BuildContext context, String name) {
+    if (name == 'Start Quiz' || name == 'Arena') {
+      Navigator.of(context)
+          .push(MaterialPageRoute<void>(builder: (_) => const QuizScreen()));
+      return;
+    }
+
     final opensNotes = [
       'Notes',
       'Past Papers',
