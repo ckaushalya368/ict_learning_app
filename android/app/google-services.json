@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "449719203576",
+    "project_id": "ict-learning-app-6e03f",
+    "storage_bucket": "ict-learning-app-6e03f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:449719203576:android:39f36bade09d14ebe9ad0d",
+        "android_client_info": {
+          "package_name": "com.example.ict_learning_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDmOTnDUfSVV1M0u-3tSP-pyaIhJQ1KJD8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
