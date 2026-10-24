@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../services/backend_service.dart';
+
 const _background = Color(0xFF090A13);
 const _surface = Color(0xFF191A2A);
 const _purple = Color(0xFF8838EF);
@@ -106,6 +108,9 @@ class _GroupArenaScreenState extends State<GroupArenaScreen> {
       if (user == null) {
         throw Exception('Sign-in failed. Please try again.');
       }
+
+      await BackendService.verifyCurrentPlayer();
+      debugPrint('Backend player verification successful');
 
       final String code;
 
