@@ -9,7 +9,10 @@ class BackendService {
     defaultValue: 'http://127.0.0.1:8000',
   );
 
-  static Future<String> verifyCurrentPlayer() async {
+  static Future<Map<String, dynamic>> _request(
+    String path, {
+    Map<String, dynamic>? body,
+  }) async {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
@@ -22,27 +25,65 @@ class BackendService {
       throw Exception('Could not get your login token.');
     }
 
-    final response = await http
-        .get(
-          Uri.parse('$baseUrl/auth/me'),
-          headers: {'Authorization': 'Bearer $token'},
-        )
-        .timeout(const Duration(seconds: 20));
+    final headers = {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    };
+
+    final uri = Uri.parse('$baseUrl$path');
+
+    final response =
+        await (body == null
+                ? http.get(uri, headers: headers)
+                : http.post(uri, headers: headers, body: jsonEncode(body)))
+            .timeout(const Duration(seconds: 40));
+
+    Map<String, dynamic>? data;
+
+    try {
+      data =
+          jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    } catch (_) {
+      throw Exception('Unexpected backend response (${response.statusCode}).');
+    }
 
     if (response.statusCode != 200) {
       throw Exception(
-        'Backend authentication failed (${response.statusCode}). '
-        'Check the backend terminal.',
+        data['detail']?.toString() ??
+            'Request failed (${response.statusCode}).',
       );
     }
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    return data;
+  }
+
+  static Future<String> verifyCurrentPlayer() async {
+    final data = await _request('/auth/me');
     final uid = data['uid'];
 
-    if (uid is! String || uid != user.uid) {
-      throw Exception('Backend returned an unexpected player ID.');
+    if (uid is! String || uid != FirebaseAuth.instance.currentUser?.uid) {
+      throw Exception('Unexpected player ID.');
     }
 
     return uid;
+  }
+
+  static Future<void> startQuiz(String code) async {
+    await _request('/arena/$code/start', body: {});
+  }
+
+  static Future<Map<String, dynamic>> getQuestions(String code) {
+    return _request('/arena/$code/questions');
+  }
+
+  static Future<Map<String, dynamic>> submitAnswers(
+    String code,
+    Map<String, int> answers,
+  ) {
+    return _request('/arena/$code/submit', body: {'answers': answers});
+  }
+
+  static Future<Map<String, dynamic>> getLeaderboard(String code) {
+    return _request('/arena/$code/leaderboard');
   }
 }
