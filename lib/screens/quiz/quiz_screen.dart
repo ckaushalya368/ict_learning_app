@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class QuizScreen extends StatefulWidget {
   const QuizScreen({super.key});
@@ -28,8 +27,7 @@ class _QuizScreenState extends State<QuizScreen> {
           'අතින් දත්ත එකතු කිරීම සහ සැකසීම සඳහා වැඩි කාලයක් ගත විය හැකිය.',
     ),
     (
-      question:
-          'දත්ත එකතු කර ප්‍රතිඵල නිකුත් කිරීමට දිගු කාලයක් ගත වීමේ ගැටලුව කුමක්ද?',
+      question: 'දත්ත එකතු කර ප්‍රතිඵල නිකුත් කිරීමට දිගු කාලයක් ගත වීමේ ගැටලුව කුමක්ද?',
       options: [
         'මුල් දත්ත අදාළ තත්ත්වය වෙනස් වී තිබිය හැකිය',
         'දත්ත සැමවිටම වඩාත් නිවැරදි වේ',
@@ -54,14 +52,8 @@ class _QuizScreenState extends State<QuizScreen> {
           'ජාලයක් හරහා සම්බන්ධ උපකරණ අතර දත්ත සහ සම්පත් හුවමාරු කළ හැකිය.',
     ),
     (
-      question:
-          'අන්තර්ජාල සන්නිවේදනය සඳහා භාවිත වන ප්‍රොටෝකෝල කට්ටලය කුමක්ද?',
-      options: [
-        'HTML',
-        'USB',
-        'PDF',
-        'TCP/IP',
-      ],
+      question: 'අන්තර්ජාල සන්නිවේදනය සඳහා භාවිත වන ප්‍රොටෝකෝල කට්ටලය කුමක්ද?',
+      options: ['HTML', 'USB', 'PDF', 'TCP/IP'],
       answer: 3,
       explanation:
           'TCP/IP යනු අන්තර්ජාල සන්නිවේදනයට භාවිත වන ප්‍රොටෝකෝල කට්ටලයකි.',
@@ -225,17 +217,14 @@ class _QuizScreenState extends State<QuizScreen> {
                     currentQuestion--;
                   });
                 },
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                ),
+                style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
                 child: const Text('Previous'),
               ),
               const SizedBox(width: 12),
             ],
             Expanded(
               child: ElevatedButton(
-                onPressed:
-                    answers[currentQuestion] == null ? null : _next,
+                onPressed: answers[currentQuestion] == null ? null : _next,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: purple,
                   foregroundColor: Colors.white,
@@ -331,10 +320,7 @@ class _QuizScreenState extends State<QuizScreen> {
                   const SizedBox(height: 12),
                   Text(
                     'Your answer: ${selectedAnswer == null ? "Not answered" : question.options[selectedAnswer]}',
-                    style: const TextStyle(
-                      color: muted,
-                      height: 1.5,
-                    ),
+                    style: const TextStyle(color: muted, height: 1.5),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -347,10 +333,7 @@ class _QuizScreenState extends State<QuizScreen> {
                   const SizedBox(height: 10),
                   Text(
                     question.explanation,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      height: 1.6,
-                    ),
+                    style: const TextStyle(color: Colors.white, height: 1.6),
                   ),
                 ],
               ),
@@ -369,10 +352,7 @@ class _QuizScreenState extends State<QuizScreen> {
         ),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text(
-            'Back',
-            style: TextStyle(color: muted),
-          ),
+          child: const Text('Back', style: TextStyle(color: muted)),
         ),
       ],
     );
