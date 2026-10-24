@@ -1,8 +1,12 @@
 import logging
+from typing import Annotated
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 
+from auth import get_current_user
 from firebase_setup import get_database
+from fastapi.middleware.cors import CORSMiddleware
+from arena import router as arena_router
 
 logger = logging.getLogger(__name__)
 
@@ -11,6 +15,13 @@ app = FastAPI(
     version="1.0.0",
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Authorization", "Content-Type"],
+)
 
 @app.get("/health")
 def health_check():
@@ -21,8 +32,6 @@ def health_check():
 def firebase_health_check():
     try:
         db = get_database()
-
-        # Data වෙනස් නොකර Firestore connection එක පරීක්ෂා කරනවා.
         db.collection("_health").document("connection").get(timeout=10)
 
         return {
@@ -35,3 +44,14 @@ def firebase_health_check():
             status_code=503,
             detail="Firebase connection failed. Check the backend terminal.",
         ) from None
+
+
+@app.get("/auth/me")
+def current_player(
+    user: Annotated[dict, Depends(get_current_user)],
+):
+    return {
+        "uid": user["uid"],
+        "provider": user.get("firebase", {}).get("sign_in_provider"),
+    }
+app.include_router(arena_router)

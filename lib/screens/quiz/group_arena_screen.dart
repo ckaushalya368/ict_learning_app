@@ -5,6 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../services/backend_service.dart';
+import 'group_quiz_panel.dart';
+
 const _background = Color(0xFF090A13);
 const _surface = Color(0xFF191A2A);
 const _purple = Color(0xFF8838EF);
@@ -107,6 +110,9 @@ class _GroupArenaScreenState extends State<GroupArenaScreen> {
         throw Exception('Sign-in failed. Please try again.');
       }
 
+      await BackendService.verifyCurrentPlayer();
+      debugPrint('Backend player verification successful');
+
       final String code;
 
       if (isHost) {
@@ -124,24 +130,25 @@ class _GroupArenaScreenState extends State<GroupArenaScreen> {
         ),
       );
 
-      // Back හෝ Leave Lobby භාවිත කළාම membership ඉවත් කරනවා.
+      // Quiz එක පටන්ගත් පසු participant records තබාගන්නවා.
       final db = FirebaseFirestore.instance;
       final room = db.collection('rooms').doc(code);
-      final batch = db.batch();
-
-      batch.delete(room.collection('players').doc(user.uid));
-
-      if (isHost) {
-        batch.update(room, {'status': 'closed'});
-      }
 
       try {
-        await batch.commit();
+        await db.runTransaction<void>((transaction) async {
+          final snapshot = await transaction.get(room);
+
+          if (snapshot.data()?['status'] != 'waiting') return;
+
+          transaction.delete(room.collection('players').doc(user.uid));
+
+          if (isHost) {
+            transaction.update(room, {'status': 'closed'});
+          }
+        });
       } catch (_) {
         if (mounted) {
-          showMessage(
-            'Could not finish leaving the room. Check your connection.',
-          );
+          showMessage('Could not leave the room. Check your connection.');
         }
       }
     } on FirebaseException catch (error) {
@@ -312,6 +319,11 @@ class _GroupLobbyState extends State<_GroupLobby> {
   late final Stream<DocumentSnapshot<Map<String, dynamic>>> roomStream;
   late final Stream<QuerySnapshot<Map<String, dynamic>>> playersStream;
 
+  Future<Map<String, dynamic>>? leaderboardFuture;
+
+  bool starting = false;
+  String? startError;
+
   @override
   void initState() {
     super.initState();
@@ -324,13 +336,32 @@ class _GroupLobbyState extends State<_GroupLobby> {
     playersStream = room.collection('players').snapshots();
   }
 
+  Future<void> startQuiz() async {
+    setState(() {
+      starting = true;
+      startError = null;
+    });
+
+    try {
+      await BackendService.startQuiz(widget.roomCode);
+    } catch (error) {
+      if (mounted) {
+        setState(() => startError = error.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() => starting = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: const Color(0xFF090A13),
       appBar: AppBar(
-        title: const Text('Group Lobby'),
-        backgroundColor: _surface,
+        title: const Text('Group Arena'),
+        backgroundColor: const Color(0xFF191A2A),
         foregroundColor: Colors.white,
       ),
       body: Align(
@@ -339,125 +370,51 @@ class _GroupLobbyState extends State<_GroupLobby> {
           constraints: const BoxConstraints(maxWidth: 420),
           child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
             stream: roomStream,
-            builder: (context, roomSnapshot) {
-              if (roomSnapshot.hasError) {
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
                 return const Center(
                   child: Text(
-                    'Could not load the room. Go back and try again.',
-                    style: TextStyle(color: Colors.white),
-                    textAlign: TextAlign.center,
+                    'Could not load the room.',
+                    style: TextStyle(color: Colors.orangeAccent),
                   ),
                 );
               }
 
-              if (!roomSnapshot.hasData) {
+              if (!snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
 
-              final room = roomSnapshot.data!.data();
-              final closed = room == null || room['status'] != 'waiting';
-              final hostId = room?['hostId'];
+              final room = snapshot.data!.data();
+              final status = room?['status'];
+              final isHost = room?['hostId'] == widget.uid;
 
               return ListView(
                 padding: const EdgeInsets.all(24),
                 children: [
-                  const Text(
-                    'ROOM CODE',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: _muted),
-                  ),
-                  const SizedBox(height: 12),
-                  SelectableText(
-                    widget.roomCode,
+                  Text(
+                    'ROOM ${widget.roomCode}',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Color(0xFFAE78FF),
-                      fontSize: 36,
+                      fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: 5,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    closed
-                        ? 'The host has closed this room.'
-                        : 'Share this code with your friends.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: closed ? Colors.orangeAccent : _muted,
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  if (!closed)
-                    StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                      stream: playersStream,
-                      builder: (context, snapshot) {
-                        if (snapshot.hasError) {
-                          return const Text(
-                            'Could not load players. Check Firestore Rules.',
-                            style: TextStyle(color: Colors.orangeAccent),
-                          );
-                        }
-
-                        if (!snapshot.hasData) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        }
-
-                        final players = snapshot.data!.docs.toList()
-                          ..sort((a, b) {
-                            if (a.id == b.id) return 0;
-                            if (a.id == hostId) return -1;
-                            if (b.id == hostId) return 1;
-                            return (a.data()['name'] as String).compareTo(
-                              b.data()['name'] as String,
-                            );
-                          });
-
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              'Players · ${players.length}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 19,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            for (final player in players)
-                              Card(
-                                color: _surface,
-                                child: ListTile(
-                                  leading: Icon(
-                                    player.id == hostId
-                                        ? Icons.workspace_premium
-                                        : Icons.person,
-                                    color: const Color(0xFFAE78FF),
-                                  ),
-                                  title: Text(
-                                    player.data()['name'] as String,
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                                  subtitle: Text(
-                                    '${player.id == hostId ? 'Host' : 'Player'}'
-                                    '${player.id == widget.uid ? ' · You' : ''}',
-                                    style: const TextStyle(color: _muted),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        );
-                      },
-                    ),
                   const SizedBox(height: 24),
-                  const Text(
-                    'Quiz tasks and the Legend leaderboard will be '
-                    'added in the next step.',
-                    style: TextStyle(color: _muted, height: 1.6),
-                  ),
+                  if (status == 'waiting')
+                    waitingLobby(isHost)
+                  else if (status == 'playing')
+                    GroupQuizPanel(
+                      key: ValueKey(widget.roomCode),
+                      roomCode: widget.roomCode,
+                    )
+                  else if (status == 'finished')
+                    leaderboard()
+                  else
+                    const Text(
+                      'This room is closed.',
+                      style: TextStyle(color: Colors.orangeAccent),
+                    ),
                   const SizedBox(height: 24),
                   OutlinedButton(
                     onPressed: () => Navigator.of(context).pop(),
@@ -465,9 +422,9 @@ class _GroupLobbyState extends State<_GroupLobby> {
                       foregroundColor: Colors.white,
                     ),
                     child: Text(
-                      widget.uid == hostId && !closed
+                      isHost && status == 'waiting'
                           ? 'Close Room & Leave'
-                          : 'Leave Lobby',
+                          : 'Back to Group Arena',
                     ),
                   ),
                 ],
@@ -476,6 +433,173 @@ class _GroupLobbyState extends State<_GroupLobby> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget waitingLobby(bool isHost) {
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: playersStream,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const Text(
+            'Could not load players. Check Firestore Rules.',
+            style: TextStyle(color: Colors.orangeAccent),
+          );
+        }
+
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final players = snapshot.data!.docs;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Players · ${players.length}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            for (final player in players)
+              Card(
+                color: const Color(0xFF191A2A),
+                child: ListTile(
+                  leading: const Icon(Icons.person, color: Color(0xFFAE78FF)),
+                  title: Text(
+                    player.data()['name'] as String,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  subtitle: Text(
+                    player.id == widget.uid ? 'You' : 'Player',
+                    style: const TextStyle(color: Color(0xFF9295B1)),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 20),
+            if (startError != null)
+              Text(
+                startError!,
+                style: const TextStyle(color: Colors.orangeAccent),
+              ),
+            if (isHost)
+              ElevatedButton(
+                onPressed: starting || players.length < 2 ? null : startQuiz,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF8838EF),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.all(16),
+                ),
+                child: Text(starting ? 'Starting...' : 'Start Quiz'),
+              )
+            else
+              const Text(
+                'Waiting for the host to start...',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFF9295B1)),
+              ),
+            if (players.length < 2)
+              const Padding(
+                padding: EdgeInsets.only(top: 12),
+                child: Text(
+                  'At least two players are required.',
+                  style: TextStyle(color: Color(0xFF9295B1)),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget leaderboard() {
+    leaderboardFuture ??= BackendService.getLeaderboard(widget.roomCode);
+
+    return FutureBuilder<Map<String, dynamic>>(
+      future: leaderboardFuture,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Column(
+            children: [
+              Text(
+                snapshot.error.toString(),
+                style: const TextStyle(color: Colors.orangeAccent),
+              ),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    leaderboardFuture = BackendService.getLeaderboard(
+                      widget.roomCode,
+                    );
+                  });
+                },
+                child: const Text('Retry'),
+              ),
+            ],
+          );
+        }
+
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final data = snapshot.data!;
+        final players = (data['players'] as List)
+            .map((item) => Map<String, dynamic>.from(item as Map))
+            .toList();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Icon(Icons.emoji_events, size: 64, color: Colors.amber),
+            const SizedBox(height: 12),
+            const Text(
+              'Legend Leaderboard',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 20),
+            for (final player in players)
+              Card(
+                color: const Color(0xFF191A2A),
+                child: ListTile(
+                  leading: Icon(
+                    player['isLegend'] == true
+                        ? Icons.emoji_events
+                        : Icons.person,
+                    color: player['isLegend'] == true
+                        ? Colors.amber
+                        : const Color(0xFFAE78FF),
+                  ),
+                  title: Text(
+                    '${player['name']}'
+                    '${player['uid'] == widget.uid ? ' · You' : ''}',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  subtitle: Text(
+                    player['isLegend'] == true ? 'Legend' : 'Completed',
+                    style: const TextStyle(color: Color(0xFF9295B1)),
+                  ),
+                  trailing: Text(
+                    '${player['score']}/${data['total']}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
