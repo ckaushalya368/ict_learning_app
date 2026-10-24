@@ -86,4 +86,11 @@ class BackendService {
   static Future<Map<String, dynamic>> getLeaderboard(String code) {
     return _request('/arena/$code/leaderboard');
   }
+
+  static Future<Map<String, dynamic>> saveAnswers(
+    String code,
+    Map<String, int> answers,
+  ) {
+    return _request('/arena/$code/answers', body: {'answers': answers});
+  }
 }
