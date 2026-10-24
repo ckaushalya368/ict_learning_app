@@ -6,6 +6,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from auth import get_current_user
 from firebase_setup import get_database
 from fastapi.middleware.cors import CORSMiddleware
+from arena import router as arena_router
 
 logger = logging.getLogger(__name__)
 
@@ -53,3 +54,4 @@ def current_player(
         "uid": user["uid"],
         "provider": user.get("firebase", {}).get("sign_in_provider"),
     }
+app.include_router(arena_router)
