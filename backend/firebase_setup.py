@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import firebase_admin
@@ -8,8 +9,15 @@ def get_firebase_app():
     try:
         return firebase_admin.get_app()
     except ValueError:
-        key_path = Path(__file__).parent / "service-account.json"
-        credential = credentials.Certificate(str(key_path))
+        local_key = Path(__file__).parent / "service-account.json"
+
+        key_path = os.environ.get(
+            "GOOGLE_APPLICATION_CREDENTIALS",
+            str(local_key),
+        )
+
+        credential = credentials.Certificate(key_path)
+
         return firebase_admin.initialize_app(credential)
 
 
