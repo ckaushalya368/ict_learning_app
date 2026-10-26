@@ -85,7 +85,7 @@ class HomeScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           const Text(
-                            'Kavindi Perera',
+                            'Kavindu Oshadha',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 25,
@@ -94,7 +94,7 @@ class HomeScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 5),
                           const Text(
-                            'A/L ICT — Grade 12 · Colombo',
+                            ' ICT ',
                             style: TextStyle(color: muted, fontSize: 12),
                           ),
                           const SizedBox(height: 24),
