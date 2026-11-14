@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import '../notes/notes_screen.dart';
 import '../quiz/quiz_screen.dart';
 import '../quiz/group_arena_screen.dart';
+import '../profile/profile_screen.dart';
+import '../lessons/buy_lessons_screen.dart';
+
+import 'package:firebase_auth/firebase_auth.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -11,10 +15,22 @@ class HomeScreen extends StatelessWidget {
   static const surface = Color(0xFF191A2A);
   static const muted = Color(0xFF9295B1);
   static const purple = Color(0xFF8B46FF);
-  static const cyan = Color(0xFF00CEE4);
+  static const cyan = Color.fromARGB(255, 48, 108, 114);
   static const outline = Color(0xFF2A2B3C);
 
   void _onTap(BuildContext context, String name) {
+    if (name == 'Buy Lessons') {
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute<void>(builder: (_) => const BuyLessonsScreen()));
+      return;
+    }
+    if (name.trim() == 'Buy Lesson' || name.trim() == 'Buy Lessons') {
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute<void>(builder: (_) => const BuyLessonsScreen()));
+      return;
+    }
     if (name == 'Group Arena' || name == 'Arena') {
       Navigator.of(
         context,
@@ -29,6 +45,7 @@ class HomeScreen extends StatelessWidget {
 
     final opensNotes = [
       'Notes',
+      'Module Notes',
       'Past Papers',
       'Database Management',
       '2023 A/L ICT Paper',
@@ -43,6 +60,42 @@ class HomeScreen extends StatelessWidget {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => NotesScreen(initialTab: showPapers ? 1 : 0),
+        ),
+      );
+      return;
+    }
+
+    const messages = {
+      'Today’s Tasks': 'No tasks are available yet.',
+      'Buy Lessons': 'Lesson purchases are coming soon.',
+      'Payment History': 'Payment history is coming soon.',
+    };
+
+    if (name == 'Profile' || messages.containsKey(name)) {
+      final user = FirebaseAuth.instance.currentUser;
+      final displayName = user?.displayName?.trim() ?? '';
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => Scaffold(
+            backgroundColor: background,
+            appBar: AppBar(
+              title: Text(name),
+              backgroundColor: surface,
+              foregroundColor: Colors.white,
+            ),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  name == 'Profile'
+                      ? "${displayName.isEmpty ? 'Student' : displayName}\n${user?.email ?? ''}"
+                      : messages[name]!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                ),
+              ),
+            ),
+          ),
         ),
       );
       return;
@@ -84,13 +137,23 @@ class HomeScreen extends StatelessWidget {
                             style: TextStyle(color: muted, fontSize: 12),
                           ),
                           const SizedBox(height: 8),
-                          const Text(
-                            'Kavindu Oshadha',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 25,
-                              fontWeight: FontWeight.w800,
-                            ),
+                          StreamBuilder<User?>(
+                            stream: FirebaseAuth.instance.userChanges(),
+                            builder: (context, snapshot) {
+                              final user =
+                                  snapshot.data ??
+                                  FirebaseAuth.instance.currentUser;
+                              final name = user?.displayName?.trim() ?? '';
+
+                              return Text(
+                                name.isEmpty ? 'Welcome!' : name,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 25,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              );
+                            },
                           ),
                           const SizedBox(height: 5),
                           const Text(
@@ -98,8 +161,6 @@ class HomeScreen extends StatelessWidget {
                             style: TextStyle(color: muted, fontSize: 12),
                           ),
                           const SizedBox(height: 24),
-                          _stats(),
-                          const SizedBox(height: 30),
                           _heading('Quick Actions'),
                           const SizedBox(height: 14),
                           Row(
@@ -147,71 +208,21 @@ class HomeScreen extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 26),
-                          Row(
-                            children: [
-                              Expanded(child: _heading('✦ AI Recommendations')),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'FOR YOU',
-                                style: TextStyle(
-                                  color: purple,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1,
-                                ),
-                              ),
-                            ],
-                          ),
+                          _heading('Learning & Account'),
                           const SizedBox(height: 14),
-                          _recommendation(
-                            context,
-                            emoji: '🌐',
-                            tag: 'Weak Area',
-                            type: 'Quiz',
-                            title: 'Network Protocols',
-                            description:
-                                'OSI Model & TCP/IP — you scored 42% last time',
-                            color: const Color(0xFFFF4E75),
-                          ),
-                          const SizedBox(height: 10),
-                          _recommendation(
-                            context,
-                            emoji: '🗄️',
-                            tag: 'Recommended',
-                            type: 'Notes',
-                            title: 'Database Management',
-                            description:
-                                'SQL normalization — not studied in 8 days',
-                            color: cyan,
-                          ),
-                          const SizedBox(height: 10),
-                          _recommendation(
-                            context,
-                            emoji: '📝',
-                            tag: 'Past Paper',
-                            type: 'Practice',
-                            title: '2023 A/L ICT Paper',
-                            description: 'Section B — Essay questions',
-                            color: const Color(0xFFFFB522),
-                          ),
-                          const SizedBox(height: 26),
-                          _heading('Continue Learning'),
-                          const SizedBox(height: 14),
-                          _learning(
-                            context,
-                            'Computer Architecture',
-                            0.78,
-                            purple,
-                          ),
-                          const SizedBox(height: 10),
-                          _learning(context, 'Data Structures', 0.55, cyan),
-                          const SizedBox(height: 10),
-                          _learning(
-                            context,
-                            'Internet & Networks',
-                            0.32,
-                            const Color(0xFFFF4E75),
-                          ),
+                          for (final (icon, title, subtitle) in const [
+                            ('📅', 'Today’s Tasks', 'View daily tasks'),
+                            ('📚', 'Module Notes', 'Browse ICT notes'),
+                            ('🛒', 'Buy Lessons', 'Explore paid lessons'),
+                            ('🧾', 'Payment History', 'View past payments'),
+                            ('👤', 'Profile', 'View account details'),
+                          ]) ...[
+                            SizedBox(
+                              width: double.infinity,
+                              child: _action(context, icon, title, subtitle),
+                            ),
+                            const SizedBox(height: 10),
+                          ],
                         ],
                       ),
                     ),
@@ -237,125 +248,11 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _label(String text) {
-    return Text(
-      text,
-      style: const TextStyle(color: muted, fontSize: 10, letterSpacing: 0.7),
-    );
-  }
-
   BoxDecoration _decoration() {
     return BoxDecoration(
       color: surface,
       borderRadius: BorderRadius.circular(14),
       border: Border.all(color: outline),
-    );
-  }
-
-  Widget _stats() {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A102D),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFF542396)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _label('TOTAL XP'),
-                  const SizedBox(height: 10),
-                  const Text(
-                    '4,280',
-                    style: TextStyle(
-                      color: Color(0xFF9D72FF),
-                      fontSize: 25,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  _progress(0.72, cyan),
-                  const SizedBox(height: 8),
-                  const Text(
-                    '720 XP to Level 6',
-                    style: TextStyle(color: muted, fontSize: 9),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(14),
-              decoration: _decoration(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _label('STREAK'),
-                  const SizedBox(height: 10),
-                  const Text(
-                    '5 🔥',
-                    style: TextStyle(
-                      color: Color(0xFFFFAE28),
-                      fontSize: 25,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: List.generate(7, (index) {
-                      const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-
-                      return Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 1.5),
-                          child: Column(
-                            children: [
-                              Container(
-                                height: 17,
-                                decoration: BoxDecoration(
-                                  color: index < 5
-                                      ? null
-                                      : const Color(0xFF292A3B),
-                                  gradient: index < 5
-                                      ? const LinearGradient(
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                          colors: [
-                                            Color(0xFFFFAE42),
-                                            Color(0xFFFF586B),
-                                          ],
-                                        )
-                                      : null,
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                days[index],
-                                style: const TextStyle(
-                                  color: muted,
-                                  fontSize: 8,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -413,185 +310,14 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _recommendation(
-    BuildContext context, {
-    required String emoji,
-    required String tag,
-    required String type,
-    required String title,
-    required String description,
-    required Color color,
-  }) {
-    // Uniform border keeps rounded corners valid.
-    // The colored left stripe is drawn separately.
-    return Container(
-      decoration: _decoration(),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          Positioned(
-            top: 0,
-            bottom: 0,
-            left: 0,
-            child: Container(width: 3, color: color),
-          ),
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () => _onTap(context, title),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: color.withAlpha(22),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(emoji, style: const TextStyle(fontSize: 20)),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Wrap(
-                            spacing: 6,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 5,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: color.withAlpha(25),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  tag,
-                                  style: TextStyle(
-                                    color: color,
-                                    fontSize: 8,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                type,
-                                style: const TextStyle(
-                                  color: muted,
-                                  fontSize: 9,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            title,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            description,
-                            style: const TextStyle(
-                              color: muted,
-                              fontSize: 10,
-                              height: 1.4,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.chevron_right, color: muted, size: 18),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _progress(double value, Color color) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: LinearProgressIndicator(
-        value: value,
-        minHeight: 5,
-        backgroundColor: const Color(0xFF2B2B3D),
-        valueColor: AlwaysStoppedAnimation<Color>(color),
-      ),
-    );
-  }
-
-  Widget _learning(
-    BuildContext context,
-    String title,
-    double value,
-    Color color,
-  ) {
-    return Container(
-      decoration: _decoration(),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: () => _onTap(context, title),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${(value * 100).round()}%',
-                      style: TextStyle(
-                        color: color,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                _progress(value, color),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _navigation(BuildContext context) {
-    const labels = ['Home', 'Notes', 'Arena', 'Insights', 'Profile'];
+    const labels = ['Home', 'Notes', 'Arena', 'Buy Lesson', 'Profile'];
 
     const icons = [
       Icons.home_outlined,
       Icons.menu_book_rounded,
       Icons.bolt_rounded,
-      Icons.track_changes_rounded,
+      Icons.shopping_bag_outlined,
       Icons.account_circle_outlined,
     ];
 
